@@ -1,8 +1,3 @@
-/*
-Compile este programa asi
-
-gcc message_send.c -o send
-*/
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -12,44 +7,46 @@ gcc message_send.c -o send
 
 #define MSGSZ 128
 
-/**
-Esta estructura define los elementos que tiene un mensaje
-*/
-typedef struct msgbuf
-{
+typedef struct msgbuf {
     long mtype;
-    char mtext[MSGSZ]; // Un mensaje de longitud MSGSZ
+    char mtext[MSGSZ];
 } message_buf;
 
-int main()
-{
+int main() {
     int msqid;
-    int msgflg = IPC_CREAT | 0666;
-    key_t key;
-    message_buf sbuf;
-    size_t buf_length;
+    key_t key = 1234;
+    message_buf buf;
 
-    key = 1234;
-
-    if ((msqid = msgget(key, msgflg )) < 0) {
+    // Crear o abrir la cola de mensajes
+    if ((msqid = msgget(key, IPC_CREAT | 0666)) < 0) {
         perror("msgget");
         exit(1);
     }
 
-    sbuf.mtype = 1;
-
-    (void) strcpy(sbuf.mtext, "Are you hearing me?");
-
-    buf_length = strlen(sbuf.mtext) + 1 ;
-
-    if (msgsnd(msqid, &sbuf, buf_length, IPC_NOWAIT) < 0) {
-       perror("msgsnd");
+    // Paso 1: Enviar "Are you hearing me?" (mtype = 1)
+    buf.mtype = 1;
+    strcpy(buf.mtext, "Are you hearing me?");
+    if (msgsnd(msqid, &buf, strlen(buf.mtext) + 1, 0) < 0) {
+        perror("msgsnd P1");
         exit(1);
     }
+    printf("Process 1 envio: \"%s\"\n", buf.mtext);
 
-    printf("Message : \"%s\" Sent\n", sbuf.mtext);
-    
-    exit(0);
+    // Paso 2: Esperar respuesta de Process 2 (mtype = 2)
+    if (msgrcv(msqid, &buf, MSGSZ, 2, 0) < 0) {
+        perror("msgrcv P1");
+        exit(1);
+    }
+    printf("Process 1 recibio: \"%s\"\n", buf.mtext);
+
+    // Paso 3: Replicar "I can hear you too" (mtype = 1)
+    buf.mtype = 1;
+    strcpy(buf.mtext, "I can hear you too");
+    if (msgsnd(msqid, &buf, strlen(buf.mtext) + 1, 0) < 0) {
+        perror("msgsnd P1 replica");
+        exit(1);
+    }
+    printf("Process 1 replico: \"%s\"\n", buf.mtext);
+
+    return 0;
 }
-
-
