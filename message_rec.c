@@ -21,7 +21,7 @@ typedef struct msgbuf
     char mtext[MSGSZ]; // Un mensaje de longitud MSGSZ
 } message_buf;
 
-main()
+int main()
 {
     int msqid;
     int msgflg = IPC_CREAT | 0666;
